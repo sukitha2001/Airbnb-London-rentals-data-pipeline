@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: dim_listings
+    description: "Core dimensional model for Airbnb listings, enriched with aggregated metrics."
+    columns:
+      - name: listing_id
+        description: "Primary key for listings."
+        tests:
+          - unique
+          - not_null
+      - name: host_id
+        description: "The host's ID."
+      - name: total_reviews
+        description: "Total number of reviews the listing has received."
+      - name: avg_price_next_30_days
+        description: "The average price of the listing over the next 30 days."
+
+  - name: fct_reviews
+    description: "Fact table for individual reviews left by guests, joined with listing attributes."
+    columns:
+      - name: review_id
+        description: "Primary key for reviews."
+        tests:
+          - unique
+          - not_null
+      - name: listing_id
+        description: "Foreign key to listings."
+        tests:
+          - not_null

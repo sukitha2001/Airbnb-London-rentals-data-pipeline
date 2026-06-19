@@ -1,0 +1,23 @@
+# dbt profiles.yml — TEMPLATE
+#
+# Copy this file to ~/.dbt/profiles.yml and fill in your own values.
+# NEVER commit the real profiles.yml to version control.
+#
+# To set up authentication, run:
+#   gcloud auth application-default login
+#
+# Docs: https://docs.getdbt.com/docs/core/connect-data-platform/bigquery-setup
+
+airbnb_pipeline:
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth                        # Uses gcloud ADC — no key file needed
+      project: your-gcp-project-id        # e.g. expernetic-airbnb-pipeline
+      dataset: airbnb_silver              # Default dataset (overridden per layer by macros)
+      location: your-bq-region            # e.g. asia-southeast1, EU, US
+      threads: 4
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      priority: interactive
+  target: dev

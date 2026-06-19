@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: stg_listings
+    description: "Cleaned version of raw Airbnb listings data."
+    columns:
+      - name: listing_id
+        description: "Primary key for listings."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_calendar
+    description: "Cleaned version of calendar availability data."
+    columns:
+      - name: listing_id
+        description: "Foreign key to listings."
+        tests:
+          - not_null
+
+  - name: stg_reviews
+    description: "Cleaned version of raw reviews data."
+    columns:
+      - name: review_id
+        description: "Primary key for reviews."
+        tests:
+          - unique
+          - not_null
+      - name: listing_id
+        description: "Foreign key to listings."
+        tests:
+          - not_null
+
+  - name: stg_neighbourhoods
+    description: "Cleaned neighborhood boundaries loaded as BigQuery GEOGRAPHY objects."
+    columns:
+      - name: neighbourhood
+        description: "The name of the neighbourhood."
+        tests:
+          - unique
+          - not_null
+      - name: neighbourhood_boundary
+        description: "The geospatial polygon representing the neighborhood boundary."
+        tests:
+          - not_null

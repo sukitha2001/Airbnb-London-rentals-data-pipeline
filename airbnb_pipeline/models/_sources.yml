@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: bronze_airbnb
+    database: expernetic-airbnb-pipeline
+    schema: airbnb_bronze
+    tables:
+      - name: raw_listings
+        description: "Raw, uncleaned property scrape data from London."
+      - name: raw_calendar
+        description: "Raw time-series future availability and pricing data."
+      - name: raw_reviews
+        description: "Raw historical guest review log."
+      - name: raw_neighbourhoods
+        description: "Raw neighborhood geojson boundaries."
