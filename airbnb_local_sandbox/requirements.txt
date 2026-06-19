@@ -3,3 +3,7 @@ geopandas
 matplotlib
 seaborn
 jupyter
+google-cloud-bigquery
+db-dtypes
+scipy
+statsmodels
