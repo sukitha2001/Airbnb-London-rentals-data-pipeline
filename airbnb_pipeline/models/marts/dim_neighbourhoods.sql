@@ -18,7 +18,10 @@ listing_stats AS (
 
 SELECT
     n.neighbourhood,
-    n.neighbourhood_group,
+    -- Fix 2: Inside Airbnb's London GeoJSON does not populate neighbourhood_group
+    -- for any of the 33 London boroughs — this field is always NULL in the source.
+    -- We default it to 'London' so the column is usable in downstream queries.
+    COALESCE(n.neighbourhood_group, 'London') AS neighbourhood_group,
     n.neighbourhood_boundary,
     COALESCE(ls.total_listings, 0)  AS total_listings,
     COALESCE(ls.total_hosts, 0)     AS total_hosts,

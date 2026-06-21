@@ -2,7 +2,11 @@ version: 2
 
 models:
   - name: dim_listings
-    description: "Core dimensional model for Airbnb listings, enriched with aggregated metrics."
+    description: >
+      Core dimensional model for Airbnb listings, enriched with aggregated
+      review and calendar metrics. Calendar metrics are computed over the
+      final 30 days of the snapshot (not CURRENT_DATE) to ensure data is
+      always populated for historical snapshots.
     columns:
       - name: listing_id
         description: "Primary key for listings."
@@ -10,14 +14,74 @@ models:
           - unique
           - not_null
       - name: host_id
-        description: "The host's ID."
-      - name: total_reviews
-        description: "Total number of reviews the listing has received."
+        description: "Foreign key to dim_hosts."
+      - name: neighbourhood
+        description: "Cleansed neighbourhood name from the source listing data."
+      - name: current_price
+        description: >
+          Listed price in USD (from stg_listings.price_usd).
+          COALESCED to 0 where the source has no price — covers ~34% of listings
+          whose hosts have not set a base price in the Inside Airbnb snapshot.
+      - name: first_review_date
+        description: >
+          Date of the earliest review for this listing. NULL for listings that
+          have never been reviewed (~26% of listings) — this is expected and
+          does not indicate a data quality problem.
+      - name: last_review_date
+        description: >
+          Date of the most recent review. NULL for unreviewed listings (same
+          population as first_review_date NULLs).
       - name: avg_price_next_30_days
-        description: "The average price of the listing over the next 30 days."
+        description: >
+          Average calendar price over the last 30 days of the data snapshot.
+          Previously computed against CURRENT_DATE() which caused 100% NULLs
+          on historical snapshots. Now resolves to the snapshot window so this
+          column is always populated for listings with calendar entries.
+      - name: availability_rate_next_30_days
+        description: >
+          Fraction of days available (0.0–1.0) in the last 30 days of the snapshot.
+          Fixed alongside avg_price_next_30_days.
+      - name: total_reviews
+        description: "Total review count. COALESCED to 0 for listings with no reviews."
+
+  - name: dim_hosts
+    description: "Host-level aggregates derived from stg_listings."
+    columns:
+      - name: host_id
+        description: "Primary key for hosts."
+        tests:
+          - unique
+          - not_null
+      - name: min_listing_price
+        description: >
+          Minimum price across all of this host's listings.
+          NULL for hosts (~43%) whose listings all have NULL price_usd in the
+          source — these are listings with no price set by the host.
+      - name: max_listing_price
+        description: "Maximum listing price. NULL for same population as min_listing_price."
+      - name: avg_listing_price
+        description: "Average listing price. NULL for same population as min_listing_price."
+
+  - name: dim_neighbourhoods
+    description: "Neighbourhood dimension with geo boundaries and aggregate listing stats."
+    columns:
+      - name: neighbourhood
+        description: "Primary key — neighbourhood name."
+        tests:
+          - unique
+          - not_null
+      - name: neighbourhood_group
+        description: >
+          Borough group. Inside Airbnb's London GeoJSON does not populate this
+          field for any of the 33 London neighbourhoods. COALESCED to 'London'
+          as a sensible default so the column is usable in downstream queries.
+      - name: neighbourhood_boundary
+        description: "BigQuery GEOGRAPHY polygon for spatial queries."
+        tests:
+          - not_null
 
   - name: fct_reviews
-    description: "Fact table for individual reviews left by guests, joined with listing attributes."
+    description: "Fact table for individual reviews, joined with listing attributes."
     columns:
       - name: review_id
         description: "Primary key for reviews."
@@ -25,6 +89,39 @@ models:
           - unique
           - not_null
       - name: listing_id
-        description: "Foreign key to listings."
+        description: "Foreign key to dim_listings."
         tests:
           - not_null
+      - name: host_name
+        description: >
+          Host name propagated from dim_listings via LEFT JOIN.
+          A very small number of hosts (<0.01%) have no registered name
+          in the source data — these rows will have NULL here.
+
+  - name: fct_availability
+    description: >
+      Daily calendar fact table — one row per listing per date.
+      Enriched with listing context from dim_listings.
+    columns:
+      - name: listing_id
+        description: "Foreign key to dim_listings."
+        tests:
+          - not_null
+      - name: price_usd
+        description: "Base calendar price in USD. Fully populated."
+      - name: adjusted_price_usd
+        description: >
+          Fix 3 — Host-manually-adjusted price in USD.
+          INTENTIONALLY SPARSE: Inside Airbnb only records this when a host
+          has explicitly overridden the base calendar price. For the London
+          snapshot, ~99.98% of rows are NULL — this is expected source-data
+          behaviour and does not indicate a pipeline problem.
+          Use price_usd for pricing analysis unless you specifically need
+          manually adjusted prices.
+      - name: minimum_nights
+        description: >
+          Minimum stay requirement from the calendar row. A negligible
+          number of rows (~17 in the full table) are NULL due to source
+          omissions — safe to ignore for analytical purposes.
+      - name: maximum_nights
+        description: "Maximum stay requirement. Same null profile as minimum_nights."

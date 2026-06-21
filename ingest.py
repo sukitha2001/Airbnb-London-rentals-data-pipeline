@@ -8,8 +8,8 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- CONFIGURATION ---
-BUCKET_NAME = "sukitha-airbnb-raw-data-london" # Double check this is your exact bucket name
-GCP_PROJECT_ID = "expernetic-airbnb-pipeline"  # Double check this is your exact project ID
+BUCKET_NAME = "sukitha-airbnb-raw-data-london" 
+GCP_PROJECT_ID = "expernetic-airbnb-pipeline"  
 
 # URLs for London
 DATA_URLS = {
@@ -29,7 +29,7 @@ def download_and_upload_to_gcs():
     retry = requests.adapters.Retry(
         total=3,
         backoff_factor=1,
-        status_forcelist=[429, 500, 502, 503, 504],  # No 403 — a 403 is a hard block, not transient
+        status_forcelist=[429, 500, 502, 503, 504], 
         allowed_methods=["GET"]
     )
     adapter = requests.adapters.HTTPAdapter(max_retries=retry)
